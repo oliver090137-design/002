@@ -5,6 +5,7 @@ import { ClassType } from './types';
 import { Particle } from './classes/Particle';
 import { Projectile } from './classes/Projectile';
 import { ResourceManager } from './ResourceManager';
+import { IsometricMapManager, IsoUtils } from './IsometricMapManager';
 
 class FloatingText {
   x: number;
@@ -264,8 +265,8 @@ export class GameEngine {
     this.floatingTexts = this.floatingTexts.filter(ft => ft.life > 0);
 
     // Update Camera
-    this.camera.x = this.player.position.x - this.canvas.width / 2;
-    this.camera.y = this.player.position.y - this.canvas.height / 2;
+    this.camera.x = this.player.position.x;
+    this.camera.y = this.player.position.y;
   }
 
   performAttack(attacker: Entity, target: Entity, multiplier: number = 1.0) {
@@ -342,226 +343,61 @@ export class GameEngine {
     this.ctx.fillStyle = '#000';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    this.ctx.save();
-    // Apply Camera Transform & Screen Shake
-    this.ctx.translate(-this.camera.x + this.screenShake.x, -this.camera.y + this.screenShake.y);
+    const focusPoint = this.player ? this.player.position : {x: 0, y: 0};
 
-    // Draw Map
-    this.drawMap();
-
-    // Draw Monsters
-    this.monsters.forEach(monster => this.drawEntity(monster));
-
-    // Draw Player
-    if (this.player) {
-      this.drawEntity(this.player);
-      
-      // Draw target indicator
-      if (this.player.target) {
-        this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.arc(this.player.target.position.x, this.player.target.position.y, this.player.target.radius + 5, 0, Math.PI * 2);
-        this.ctx.stroke();
-      }
-      
-      if (this.player.targetPosition) {
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        this.ctx.beginPath();
-        this.ctx.arc(this.player.targetPosition.x, this.player.targetPosition.y, 3, 0, Math.PI * 2);
-        this.ctx.fill();
-      }
-    }
-
-    // Draw Projectiles
-    this.projectiles.forEach(p => {
-      this.ctx.fillStyle = p.color;
-      this.ctx.beginPath();
-      this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      this.ctx.fill();
-      // Trail
-      this.ctx.fillStyle = p.color;
-      this.ctx.globalAlpha = 0.3;
-      this.ctx.beginPath();
-      this.ctx.arc(p.x - p.vx * 0.05, p.y - p.vy * 0.05, p.radius * 0.8, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.globalAlpha = 1.0;
-    });
-
-    // Draw Particles
-    this.particles.forEach(p => {
-      this.ctx.fillStyle = p.color;
-      this.ctx.globalAlpha = p.alpha;
-      this.ctx.beginPath();
-      this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.globalAlpha = 1.0;
-    });
-
-    // Draw Floating Texts
-    this.floatingTexts.forEach(ft => {
-      this.ctx.fillStyle = ft.color;
-      this.ctx.font = 'bold 14px Arial';
-      this.ctx.textAlign = 'center';
-      this.ctx.globalAlpha = Math.max(0, ft.life / 1000);
-      this.ctx.fillText(ft.text, ft.x, ft.y);
-      this.ctx.globalAlpha = 1.0;
-    });
-
-    this.ctx.restore();
+    IsometricMapManager.getInstance().renderScene(
+        this.ctx,
+        focusPoint, // Center camera on player
+        [this.player!, ...this.monsters].filter(e => e !== null),
+        this.projectiles,
+        this.particles,
+        this.floatingTexts,
+        this.canvas.width,
+        this.canvas.height
+    );
+    
+    // Draw Mouse Highlight
+    IsometricMapManager.getInstance().drawHighlight(
+        this.ctx,
+        this.mousePosition.x,
+        this.mousePosition.y,
+        focusPoint,
+        this.canvas.width,
+        this.canvas.height
+    );
   }
 
-  drawMap() {
-    // Draw World Background (Wild)
-    this.ctx.fillStyle = '#1a202c'; // Dark background
-    this.ctx.fillRect(this.camera.x, this.camera.y, this.canvas.width, this.canvas.height);
-    
-    // Draw Ground (Playable Area)
-    this.ctx.fillStyle = '#2d3748';
-    this.ctx.fillRect(-2000, -2000, 4000, 4000);
-
-    // Draw Grid (Faint)
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-    this.ctx.lineWidth = 1;
-    this.ctx.beginPath();
-    for (let x = -2000; x <= 2000; x += 100) {
-      this.ctx.moveTo(x, -2000);
-      this.ctx.lineTo(x, 2000);
-    }
-    for (let y = -2000; y <= 2000; y += 100) {
-      this.ctx.moveTo(-2000, y);
-      this.ctx.lineTo(2000, y);
-    }
-    this.ctx.stroke();
-    
-    // Draw Village (Safe Zone)
-    this.ctx.fillStyle = '#2f855a'; // Green
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, 400, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.strokeStyle = '#48bb78';
-    this.ctx.lineWidth = 5;
-    this.ctx.stroke();
-
-    // Draw Paths
-    this.ctx.strokeStyle = '#d69e2e'; // Dirt path color
-    this.ctx.lineWidth = 40;
-    this.ctx.lineCap = 'round';
-    this.ctx.beginPath();
-    // North path
-    this.ctx.moveTo(0, 0);
-    this.ctx.lineTo(0, -600);
-    // East path
-    this.ctx.moveTo(0, 0);
-    this.ctx.lineTo(600, 0);
-    this.ctx.stroke();
-
-    // Draw Village Center
-    this.ctx.fillStyle = '#4299e1'; // Blue Fountain
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, 40, 0, Math.PI * 2);
-    this.ctx.fill();
-    // Fountain water effect
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, 30, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    // Draw Houses
-    this.ctx.fillStyle = '#744210'; // Brown
-    // House 1
-    this.ctx.fillRect(-150, -200, 80, 60);
-    this.ctx.fillStyle = '#975a16'; // Roof
-    this.ctx.beginPath();
-    this.ctx.moveTo(-160, -200);
-    this.ctx.lineTo(-110, -240);
-    this.ctx.lineTo(-60, -200);
-    this.ctx.fill();
-
-    // House 2
-    this.ctx.fillStyle = '#744210';
-    this.ctx.fillRect(100, -150, 100, 80);
-    this.ctx.fillStyle = '#975a16';
-    this.ctx.beginPath();
-    this.ctx.moveTo(90, -150);
-    this.ctx.lineTo(150, -200);
-    this.ctx.lineTo(210, -150);
-    this.ctx.fill();
-
-    // House 3
-    this.ctx.fillStyle = '#744210';
-    this.ctx.fillRect(-120, 120, 60, 60);
-    this.ctx.fillStyle = '#975a16';
-    this.ctx.beginPath();
-    this.ctx.moveTo(-130, 120);
-    this.ctx.lineTo(-90, 90);
-    this.ctx.lineTo(-50, 120);
-    this.ctx.fill();
-    
-    // Draw "Wild" Label
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-    this.ctx.font = '100px Arial';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('WILD AREA', 0, -600);
-  }
-
-  drawEntity(entity: Entity) {
-    // Draw Shadow
-    this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    this.ctx.beginPath();
-    this.ctx.ellipse(entity.position.x, entity.position.y + entity.radius/2, entity.radius, entity.radius/2, 0, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    // Draw Body or Sprite
-    const sprite = entity.spriteKey ? ResourceManager.getInstance().getImage(entity.spriteKey) : undefined;
-
-    if (sprite) {
-      this.ctx.save();
-      this.ctx.beginPath();
-      this.ctx.arc(entity.position.x, entity.position.y, entity.radius, 0, Math.PI * 2);
-      this.ctx.clip();
-      this.ctx.drawImage(sprite, entity.position.x - entity.radius, entity.position.y - entity.radius, entity.radius * 2, entity.radius * 2);
-      this.ctx.restore();
-      
-      // Draw border/outline
-      this.ctx.strokeStyle = entity.color;
-      this.ctx.lineWidth = 2;
-      this.ctx.beginPath();
-      this.ctx.arc(entity.position.x, entity.position.y, entity.radius, 0, Math.PI * 2);
-      this.ctx.stroke();
-    } else {
-      this.ctx.fillStyle = entity.color;
-      this.ctx.beginPath();
-      this.ctx.arc(entity.position.x, entity.position.y, entity.radius, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
-    
-    // Draw HP Bar
-    const hpPercent = entity.stats.hp / entity.stats.maxHp;
-    const barWidth = 40;
-    const barHeight = 5;
-    const barX = entity.position.x - barWidth / 2;
-    const barY = entity.position.y - entity.radius - 10;
-
-    this.ctx.fillStyle = '#333';
-    this.ctx.fillRect(barX, barY, barWidth, barHeight);
-    this.ctx.fillStyle = hpPercent > 0.5 ? '#22c55e' : hpPercent > 0.2 ? '#eab308' : '#ef4444';
-    this.ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
-  }
+  drawMap() {} 
+  drawEntity(entity: Entity) {}
 
   handleMouseDown(e: MouseEvent) {
     if (!this.player) return;
 
     const rect = this.canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left + this.camera.x;
-    const clickY = e.clientY - rect.top + this.camera.y;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Convert Mouse Screen Pos -> World Pos using IsoUtils
+    const centerScreenX = this.canvas.width / 2;
+    const centerScreenY = this.canvas.height / 2;
+    const camScreen = IsoUtils.worldToScreen(this.camera.x, this.camera.y);
+    const offsetX = centerScreenX - camScreen.x;
+    const offsetY = centerScreenY - camScreen.y;
+    
+    // Mouse in "World Screen Space" (after untranslating camera)
+    const worldScreenX = mouseX - offsetX;
+    const worldScreenY = mouseY - offsetY;
+    
+    const worldPos = IsoUtils.screenToWorld(worldScreenX, worldScreenY);
+    const clickX = worldPos.x;
+    const clickY = worldPos.y;
 
     // Check if clicked on monster (Targeting)
     let clickedMonster: Monster | null = null;
     for (const monster of this.monsters) {
       const dx = clickX - monster.position.x;
       const dy = clickY - monster.position.y;
-      if (dx * dx + dy * dy < monster.radius * monster.radius + 100) { // Hitbox
+      if (dx * dx + dy * dy < monster.radius * monster.radius + 1000) { // Increased Hitbox for Iso
         clickedMonster = monster;
         break;
       }
@@ -578,8 +414,8 @@ export class GameEngine {
 
   handleMouseMove(e: MouseEvent) {
     const rect = this.canvas.getBoundingClientRect();
-    this.mousePosition.x = e.clientX - rect.left + this.camera.x;
-    this.mousePosition.y = e.clientY - rect.top + this.camera.y;
+    this.mousePosition.x = e.clientX - rect.left;
+    this.mousePosition.y = e.clientY - rect.top;
   }
 
   handleKeyDown(e: KeyboardEvent) {

@@ -77,7 +77,11 @@ export const GameCanvas: React.FC = () => {
     <div className="w-full h-screen bg-background-dark text-slate-100 font-display overflow-hidden relative select-none">
       {/* Game Canvas Layer */}
       <div className="absolute inset-0 z-0">
-         <canvas ref={canvasRef} className="block w-full h-full" />
+         <canvas 
+            ref={canvasRef} 
+            className="block w-full h-full" 
+            style={{ filter: 'contrast(1.15) brightness(0.85) saturate(1.2) drop-shadow(0 0 10px rgba(226, 18, 36, 0.2))' }}
+         />
       </div>
       
       {/* UI Overlay Layer */}

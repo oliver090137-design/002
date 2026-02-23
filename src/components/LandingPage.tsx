@@ -195,67 +195,75 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlay }) => {
               <button className="px-4 py-2 bg-surface-dark border border-white/10 hover:border-primary/50 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-wider rounded transition-colors">弓箭手</button>
             </div>
           </div>
-          <div className="bg-surface-dark border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
-            <div className="grid md:grid-cols-2">
-              <div className="relative h-[500px] md:h-auto bg-black overflow-hidden group">
-                <img alt="Warrior class character portrait with glowing red eyes" className="absolute inset-0 w-full h-full object-cover object-top opacity-80 group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCi4EBylRxhuOCunKoIC86HonfEPjONdNvHizc7oo_dnc2W5p9uZiDjbKbfmezSf8sQkNPfL9ie1i7_Fbk3TthdIMbPuLSZYBJt9a8gv04h-jviOyklARLDzCnDBKY3IPsi70GOpyxCCB3C5oDhrYGHHzIx0lCbTb-KidukRR_EsPfnOliEDgBNmlEU3pdvAHpXL2VK3LJWckTwZrSFvcPrPAHOPkp8AcqUcqizO9hjRqEUCO_OF6TbJTDQ7druUm5O70C6V37tgzo1"/>
-                <div className="absolute inset-0 bg-gradient-to-t from-surface-dark via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-surface-dark"></div>
-                <div className="absolute top-6 left-6 bg-black/60 backdrop-blur-md border border-white/10 px-4 py-2 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-sm">shield</span>
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">坦克 / 近戰輸出</span>
+          <div className="relative bg-surface-dark border border-white/5 rounded-2xl overflow-hidden shadow-2xl min-h-[600px] flex items-center group">
+            {/* 1. Background Image: Volcanic Battlefield */}
+            <div className="absolute inset-0 z-0">
+              <img 
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4eVNmoWm3b3PcT8544OEL-wQS8B5xfLmldUwBsSp6jarMOBzL9ZGJSISum4UojcclgjdMNZp-rwCGRuDcyEtp3dHO3g6U1o9LX077rFazA7VQHrLDF2vUsfYnojupLPcJ__TtmY-3Pef07m_VyJFNU-fbNqnGnDge_5NtmjfI4yLqjiPr6_1crUQbFTQiGevN4wmXhy2lxrOoCmEm9rhp0cgiSxy1hpdfHPq1o_7dZq-yiSPJhXWFyrsED9Php4QumaLBOa2cedaa"
+                alt="Dark volcanic battlefield with embers"
+                className="w-full h-full object-cover opacity-50 transition-transform duration-1000 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent"></div>
+            </div>
+
+            {/* 2. Character Image: Warrior Overlay */}
+            <div className="absolute right-[-10%] bottom-0 h-[110%] z-10 hidden md:block w-[60%] pointer-events-none">
+               <img 
+                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuCi4EBylRxhuOCunKoIC86HonfEPjONdNvHizc7oo_dnc2W5p9uZiDjbKbfmezSf8sQkNPfL9ie1i7_Fbk3TthdIMbPuLSZYBJt9a8gv04h-jviOyklARLDzCnDBKY3IPsi70GOpyxCCB3C5oDhrYGHHzIx0lCbTb-KidukRR_EsPfnOliEDgBNmlEU3pdvAHpXL2VK3LJWckTwZrSFvcPrPAHOPkp8AcqUcqizO9hjRqEUCO_OF6TbJTDQ7druUm5O70C6V37tgzo1"
+                 alt="Muscular warrior in heavy armor silhouette"
+                 className="w-full h-full object-cover object-top [mask-image:linear-gradient(to_left,black_60%,transparent)] drop-shadow-[0_0_20px_rgba(226,18,36,0.3)]"
+               />
+            </div>
+
+            {/* 3. Content */}
+            <div className="relative z-20 p-8 md:p-16 max-w-2xl flex flex-col justify-center h-full">
+                <div className="mb-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="size-10 rounded bg-primary/20 border border-primary/50 flex items-center justify-center text-primary">
+                      <span className="material-symbols-outlined text-2xl">shield</span>
+                    </div>
+                    <span className="text-xs font-bold text-primary uppercase tracking-[0.2em]">坦克 / 近戰輸出</span>
+                  </div>
+                  <h4 className="text-5xl md:text-7xl font-black text-white uppercase tracking-tighter mb-2 font-display">戰士</h4>
+                  <p className="text-slate-400 text-lg leading-relaxed font-sans border-l-2 border-primary pl-4">
+                    在無盡戰火中淬鍊而生，戰士是抵禦黑暗的堅固壁壘。憑藉無與倫比的力量和厚重鎧甲，他們衝鋒陷陣，粉碎敵軍陣線。
+                  </p>
+                </div>
+
+                <div className="space-y-6 mb-10 bg-black/40 p-6 rounded-xl border border-white/5 backdrop-blur-sm max-w-md">
+                  <div>
+                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                      <span>力量 (Strength)</span>
+                      <span className="text-primary">S+</span>
+                    </div>
+                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-primary to-red-900 w-[95%] shadow-[0_0_10px_rgba(226,18,36,0.5)]"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                      <span>防禦 (Defense)</span>
+                      <span className="text-primary">S</span>
+                    </div>
+                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-primary to-red-900 w-[90%] shadow-[0_0_10px_rgba(226,18,36,0.5)]"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                      <span>生存 (Survival)</span>
+                      <span className="text-primary">A+</span>
+                    </div>
+                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-primary to-red-900 w-[85%] shadow-[0_0_10px_rgba(226,18,36,0.5)]"></div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="p-8 md:p-12 flex flex-col justify-center">
-                <h4 className="text-4xl font-black text-white uppercase mb-2">戰士</h4>
-                <p className="text-primary font-bold tracking-widest uppercase text-sm mb-6">北境守護者</p>
-                <p className="text-slate-400 mb-8 leading-relaxed font-sans">
-                  在無盡戰火中淬鍊而生，戰士是抵禦黑暗的堅固壁壘。憑藉無與倫比的力量和厚重鎧甲，他們衝鋒陷陣，粉碎敵軍陣線，以堅定不移的決心守護盟友。
-                </p>
-                <div className="space-y-4 mb-8">
-                  <div>
-                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-                      <span>力量</span>
-                      <span>95%</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-primary w-[95%] shadow-[0_0_10px_rgba(226,18,36,0.5)]"></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-                      <span>防禦</span>
-                      <span>90%</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-primary w-[90%] shadow-[0_0_10px_rgba(226,18,36,0.5)]"></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-                      <span>敏捷</span>
-                      <span>40%</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-primary w-[40%] shadow-[0_0_10px_rgba(226,18,36,0.5)]"></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-                      <span>魔力</span>
-                      <span>10%</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-primary w-[10%] shadow-[0_0_10px_rgba(226,18,36,0.5)]"></div>
-                    </div>
-                  </div>
-                </div>
-                <button className="self-start text-white border-b border-primary pb-1 hover:text-primary transition-colors text-sm font-bold uppercase tracking-widest group flex items-center gap-2">
+
+                <button className="self-start h-12 px-8 bg-white/5 hover:bg-primary text-white border border-white/10 hover:border-primary text-sm font-bold uppercase tracking-widest transition-all duration-300 group flex items-center gap-3 rounded">
                   查看完整技能樹
-                  <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                  <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">arrow_forward</span>
                 </button>
-              </div>
             </div>
           </div>
         </div>
