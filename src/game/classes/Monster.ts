@@ -9,10 +9,12 @@ export class Monster extends Entity {
     super(id, x, y);
     this.color = '#e74c3c';
     this.radius = 16;
+    this.spriteKey = 'orc';
     
     this.stats = {
       hp: 80, maxHp: 80,
       mana: 30, maxMana: 30,
+      exp: 0, maxExp: 0,
       strength: 12, intelligence: 5, defense: 3,
       dexterity: 8, spirit: 5, level: 1,
       attackRange: 40, attackSpeed: 0.8, moveSpeed: 80

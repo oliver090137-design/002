@@ -34,9 +34,9 @@ export const GameCanvas: React.FC = () => {
           maxHp: player.stats.maxHp,
           mana: player.stats.mana,
           maxMana: player.stats.maxMana,
-          level: player.level,
-          exp: player.exp,
-          maxExp: player.maxExp
+          level: player.stats.level,
+          exp: player.stats.exp,
+          maxExp: player.stats.maxExp
         });
       }
     });

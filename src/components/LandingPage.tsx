@@ -1,12 +1,51 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ResourceManager } from '../game/ResourceManager';
 
 interface LandingPageProps {
   onPlay: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onPlay }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const handlePlay = async () => {
+    setIsLoading(true);
+    // Preload assets
+    const assets = [
+        { key: 'warrior', src: 'https://api.dicebear.com/9.x/adventurer/svg?seed=warrior&backgroundColor=b6e3f4' },
+        { key: 'mage', src: 'https://api.dicebear.com/9.x/adventurer/svg?seed=mage&backgroundColor=b6e3f4' },
+        { key: 'archer', src: 'https://api.dicebear.com/9.x/adventurer/svg?seed=archer&backgroundColor=b6e3f4' },
+        { key: 'priest', src: 'https://api.dicebear.com/9.x/adventurer/svg?seed=priest&backgroundColor=b6e3f4' },
+        { key: 'summoner', src: 'https://api.dicebear.com/9.x/adventurer/svg?seed=summoner&backgroundColor=b6e3f4' },
+        { key: 'orc', src: 'https://api.dicebear.com/9.x/adventurer/svg?seed=orc&backgroundColor=c0aede' },
+        { key: 'skeleton', src: 'https://api.dicebear.com/9.x/adventurer/svg?seed=skeleton&backgroundColor=c0aede' },
+    ];
+    
+    try {
+        await ResourceManager.getInstance().loadAssets(assets, (p) => setProgress(p));
+    } catch (e) {
+        console.error("Asset loading failed", e);
+    }
+    
+    setIsLoading(false);
+    onPlay();
+  };
+
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display min-h-screen flex flex-col overflow-x-hidden selection:bg-primary selection:text-white">
+      {isLoading && (
+        <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center">
+            <div className="text-primary font-bold text-2xl mb-4 tracking-widest uppercase animate-pulse">Loading Assets...</div>
+            <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
+                <div 
+                    className="h-full bg-primary transition-all duration-200 ease-out"
+                    style={{ width: `${progress}%` }}
+                ></div>
+            </div>
+            <div className="text-gray-500 text-xs mt-2 font-mono">{progress}%</div>
+        </div>
+      )}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-background-dark/80 backdrop-blur-md transition-all duration-300">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
@@ -39,7 +78,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlay }) => {
             </nav>
             <div className="flex items-center gap-4">
               <button 
-                onClick={onPlay}
+                onClick={handlePlay}
                 className="hidden sm:flex items-center justify-center h-10 px-6 bg-primary hover:bg-primary-dark text-white text-sm font-black uppercase tracking-wider rounded transition-all duration-300 shadow-[0_0_15px_rgba(226,18,36,0.3)] hover:shadow-[0_0_25px_rgba(226,18,36,0.6)] border border-primary-dark cursor-pointer"
               >
                 立即開戰
@@ -74,7 +113,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlay }) => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
             <button 
-              onClick={onPlay}
+              onClick={handlePlay}
               className="h-14 px-8 bg-primary hover:bg-primary-dark text-white text-base font-black uppercase tracking-wider rounded transition-all duration-300 shadow-[0_0_20px_rgba(226,18,36,0.4)] hover:shadow-[0_0_40px_rgba(226,18,36,0.6)] hover:-translate-y-1 flex items-center justify-center gap-2 cursor-pointer"
             >
               <span className="material-symbols-outlined">swords</span>

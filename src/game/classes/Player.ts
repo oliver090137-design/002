@@ -13,6 +13,7 @@ export class Player extends Entity {
   constructor(id: string, classType: ClassType, x: number, y: number) {
     super(id, x, y);
     this.classType = classType;
+    this.spriteKey = classType;
     this.color = '#3498db';
     this.radius = 18;
     this.initializeClassStats();
@@ -23,6 +24,7 @@ export class Player extends Entity {
     const baseStats = {
       hp: 100, maxHp: 100,
       mana: 100, maxMana: 100,
+      exp: 0, maxExp: 100,
       strength: 15, intelligence: 10, defense: 5,
       dexterity: 10, spirit: 10, level: 1,
       attackRange: 50, attackSpeed: 1.0, moveSpeed: 120
@@ -290,6 +292,30 @@ export class Player extends Entity {
         icon: 'dark_mode'
       });
     }
+  }
+
+  gainExp(amount: number) {
+    this.stats.exp += amount;
+    while (this.stats.exp >= this.stats.maxExp) {
+      this.levelUp();
+    }
+  }
+
+  levelUp() {
+    this.stats.level++;
+    this.stats.exp -= this.stats.maxExp;
+    this.stats.maxExp = Math.floor(this.stats.maxExp * 1.5);
+    
+    // Increase stats
+    this.stats.maxHp += 20;
+    this.stats.hp = this.stats.maxHp;
+    this.stats.maxMana += 10;
+    this.stats.mana = this.stats.maxMana;
+    this.stats.strength += 2;
+    this.stats.intelligence += 2;
+    this.stats.dexterity += 2;
+    this.stats.spirit += 2;
+    this.stats.defense += 1;
   }
 
   update(dt: number) {

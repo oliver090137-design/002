@@ -6,6 +6,7 @@ export abstract class Entity {
   stats: Stats;
   radius: number = 15;
   color: string = '#ffffff';
+  spriteKey?: string;
   isDead: boolean = false;
   
   // Combat

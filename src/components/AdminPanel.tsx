@@ -44,11 +44,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ engine, onClose }) => {
 
   const addExp = () => {
     if (engine.player) {
-      engine.player.level++;
-      engine.player.stats.maxHp += 50;
-      engine.player.stats.maxMana += 20;
-      engine.player.stats.hp = engine.player.stats.maxHp;
-      engine.player.stats.mana = engine.player.stats.maxMana;
+      engine.player.gainExp(engine.player.stats.maxExp);
     }
   };
 

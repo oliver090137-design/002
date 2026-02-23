@@ -2,6 +2,9 @@ import { Player } from './classes/Player';
 import { Monster } from './classes/Monster';
 import { Entity } from './classes/Entity';
 import { ClassType } from './types';
+import { Particle } from './classes/Particle';
+import { Projectile } from './classes/Projectile';
+import { ResourceManager } from './ResourceManager';
 
 class FloatingText {
   x: number;
@@ -34,6 +37,9 @@ export class GameEngine {
   player: Player | null = null;
   monsters: Monster[] = [];
   floatingTexts: FloatingText[] = [];
+  particles: Particle[] = [];
+  projectiles: Projectile[] = [];
+  
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   lastTime: number = 0;
@@ -42,6 +48,7 @@ export class GameEngine {
   
   // Camera
   camera = { x: 0, y: 0 };
+  screenShake = { x: 0, y: 0, duration: 0, intensity: 0 };
 
   // AI Throttling
   private aiUpdateInterval: number = 100;
@@ -96,6 +103,9 @@ export class GameEngine {
     console.log('Starting game with class:', classType);
     this.player = new Player('player', classType, 0, 0);
     this.monsters = [];
+    this.particles = [];
+    this.projectiles = [];
+    this.floatingTexts = [];
     
     // Spawn monsters in the wild (outside village radius 400)
     for (let i = 0; i < 20; i++) {
@@ -130,6 +140,16 @@ export class GameEngine {
 
   update(dt: number) {
     if (!this.player) return;
+
+    // Update Screen Shake
+    if (this.screenShake.duration > 0) {
+      this.screenShake.duration -= dt;
+      this.screenShake.x = (Math.random() - 0.5) * this.screenShake.intensity;
+      this.screenShake.y = (Math.random() - 0.5) * this.screenShake.intensity;
+    } else {
+      this.screenShake.x = 0;
+      this.screenShake.y = 0;
+    }
 
     // Update Player
     this.player.update(dt);
@@ -173,13 +193,71 @@ export class GameEngine {
     }
 
     // Update Monsters
+    const now = performance.now();
     this.monsters.forEach(monster => {
-      // AI disabled
+      // AI Update
+      if (this.player && !this.player.isDead) {
+         monster.updateAI(dt, this.player, now);
+         
+         // Monster Attack Logic
+         if (monster.target === this.player) {
+            const dist = Math.hypot(this.player.position.x - monster.position.x, this.player.position.y - monster.position.y);
+            if (dist <= monster.stats.attackRange) {
+               this.performAttack(monster, this.player);
+            }
+         }
+      }
+      
       monster.update(dt);
     });
 
-    // Remove dead monsters
+    // Handle Dead Monsters & EXP
+    const deadMonsters = this.monsters.filter(m => m.isDead);
+    deadMonsters.forEach(m => {
+        if (this.player) {
+             const exp = m.stats.level * 20;
+             const oldLevel = this.player.stats.level;
+             this.player.gainExp(exp);
+             this.floatingTexts.push(new FloatingText(m.position.x, m.position.y - 20, `+${exp} EXP`, '#ffff00'));
+             
+             if (this.player.stats.level > oldLevel) {
+                 this.floatingTexts.push(new FloatingText(this.player.position.x, this.player.position.y - 60, `LEVEL UP!`, '#00ff00'));
+                 this.createExplosion(this.player.position.x, this.player.position.y, '#00ff00', 30);
+             }
+        }
+    });
     this.monsters = this.monsters.filter(m => !m.isDead);
+
+    // Update Projectiles
+    this.projectiles.forEach(p => p.update(dt));
+    
+    // Check Projectile Collisions
+    for (const p of this.projectiles) {
+      if (p.isDead) continue;
+      
+      // Check collision with monsters
+      if (p.owner === this.player) {
+        for (const m of this.monsters) {
+          const dist = Math.hypot(p.x - m.position.x, p.y - m.position.y);
+          if (dist < m.radius + p.radius) {
+            // Hit!
+            p.isDead = true;
+            if (p.onHit) {
+              p.onHit(m);
+            } else {
+              this.dealDamage(p.owner, m, p.damage);
+            }
+            this.createExplosion(p.x, p.y, p.color, 5);
+            break;
+          }
+        }
+      }
+    }
+    this.projectiles = this.projectiles.filter(p => !p.isDead);
+
+    // Update Particles
+    this.particles.forEach(p => p.update(dt));
+    this.particles = this.particles.filter(p => p.life > 0);
 
     // Update Floating Texts
     this.floatingTexts.forEach(ft => ft.update(dt));
@@ -201,14 +279,44 @@ export class GameEngine {
     if (multiplier === 1.0) {
        attacker.lastAttackTime = now;
     }
+
+    // Ranged classes use projectiles for basic attacks
+    if (attacker === this.player && (this.player.classType === 'mage' || this.player.classType === 'archer')) {
+      const projSpeed = this.player.classType === 'archer' ? 600 : 400;
+      const color = this.player.classType === 'archer' ? '#ffffff' : '#ffaa00';
+      
+      const baseDamage = attacker.stats.strength || attacker.stats.intelligence || 10;
+      const damage = Math.floor(baseDamage * multiplier);
+
+      this.projectiles.push(new Projectile(
+        attacker,
+        attacker.position.x,
+        attacker.position.y,
+        target.position.x,
+        target.position.y,
+        projSpeed,
+        damage,
+        color
+      ));
+      return;
+    }
     
-    // Calculate Damage
+    // Melee Instant Hit
     const baseDamage = attacker.stats.strength || 10;
+    const damage = Math.floor(baseDamage * multiplier);
+    this.dealDamage(attacker, target, damage);
+  }
+
+  dealDamage(attacker: Entity, target: Entity, amount: number) {
     const defense = target.stats.defense || 0;
-    const damage = Math.max(1, Math.floor((baseDamage * multiplier) - defense));
+    const damage = Math.max(1, Math.floor(amount - defense));
     
     target.takeDamage(damage);
     
+    // Visuals
+    this.triggerScreenShake(2, 100);
+    this.createExplosion(target.position.x, target.position.y, '#ff0000', 3);
+
     // Spawn Floating Text
     this.floatingTexts.push(new FloatingText(
       target.position.x,
@@ -218,14 +326,25 @@ export class GameEngine {
     ));
   }
 
+  createExplosion(x: number, y: number, color: string, count: number) {
+    for (let i = 0; i < count; i++) {
+      this.particles.push(new Particle(x, y, color, 1, 100, 500));
+    }
+  }
+
+  triggerScreenShake(intensity: number, duration: number) {
+    this.screenShake.intensity = intensity;
+    this.screenShake.duration = duration;
+  }
+
   render() {
     // Clear background
     this.ctx.fillStyle = '#000';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     this.ctx.save();
-    // Apply Camera Transform
-    this.ctx.translate(-this.camera.x, -this.camera.y);
+    // Apply Camera Transform & Screen Shake
+    this.ctx.translate(-this.camera.x + this.screenShake.x, -this.camera.y + this.screenShake.y);
 
     // Draw Map
     this.drawMap();
@@ -253,6 +372,31 @@ export class GameEngine {
         this.ctx.fill();
       }
     }
+
+    // Draw Projectiles
+    this.projectiles.forEach(p => {
+      this.ctx.fillStyle = p.color;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      this.ctx.fill();
+      // Trail
+      this.ctx.fillStyle = p.color;
+      this.ctx.globalAlpha = 0.3;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x - p.vx * 0.05, p.y - p.vy * 0.05, p.radius * 0.8, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.globalAlpha = 1.0;
+    });
+
+    // Draw Particles
+    this.particles.forEach(p => {
+      this.ctx.fillStyle = p.color;
+      this.ctx.globalAlpha = p.alpha;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.globalAlpha = 1.0;
+    });
 
     // Draw Floating Texts
     this.floatingTexts.forEach(ft => {
@@ -368,11 +512,29 @@ export class GameEngine {
     this.ctx.ellipse(entity.position.x, entity.position.y + entity.radius/2, entity.radius, entity.radius/2, 0, 0, Math.PI * 2);
     this.ctx.fill();
 
-    // Draw Body
-    this.ctx.fillStyle = entity.color;
-    this.ctx.beginPath();
-    this.ctx.arc(entity.position.x, entity.position.y, entity.radius, 0, Math.PI * 2);
-    this.ctx.fill();
+    // Draw Body or Sprite
+    const sprite = entity.spriteKey ? ResourceManager.getInstance().getImage(entity.spriteKey) : undefined;
+
+    if (sprite) {
+      this.ctx.save();
+      this.ctx.beginPath();
+      this.ctx.arc(entity.position.x, entity.position.y, entity.radius, 0, Math.PI * 2);
+      this.ctx.clip();
+      this.ctx.drawImage(sprite, entity.position.x - entity.radius, entity.position.y - entity.radius, entity.radius * 2, entity.radius * 2);
+      this.ctx.restore();
+      
+      // Draw border/outline
+      this.ctx.strokeStyle = entity.color;
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.arc(entity.position.x, entity.position.y, entity.radius, 0, Math.PI * 2);
+      this.ctx.stroke();
+    } else {
+      this.ctx.fillStyle = entity.color;
+      this.ctx.beginPath();
+      this.ctx.arc(entity.position.x, entity.position.y, entity.radius, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
     
     // Draw HP Bar
     const hpPercent = entity.stats.hp / entity.stats.maxHp;
@@ -386,8 +548,6 @@ export class GameEngine {
     this.ctx.fillStyle = hpPercent > 0.5 ? '#22c55e' : hpPercent > 0.2 ? '#eab308' : '#ef4444';
     this.ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
   }
-
-  // drawGrid method removed
 
   handleMouseDown(e: MouseEvent) {
     if (!this.player) return;
@@ -468,20 +628,68 @@ export class GameEngine {
     this.player.stats.mana -= skill.cost;
     skill.lastUsed = now;
 
-    // Simple skill logic for now
-    if (skill.type === 'BUFF') {
+    // Enhanced Skill Logic with Visuals
+    if (skill.type === 'SUMMON') {
+       this.floatingTexts.push(new FloatingText(this.player.position.x, this.player.position.y - 40, `${skill.name}!`, '#a855f7'));
+       this.createExplosion(this.player.position.x, this.player.position.y, '#a855f7', 20);
+       // Placeholder for summon logic
+    } else if (skill.type === 'BUFF') {
        this.floatingTexts.push(new FloatingText(this.player.position.x, this.player.position.y - 40, `${skill.name}!`, '#00ff00'));
+       this.createExplosion(this.player.position.x, this.player.position.y, '#ffff00', 10);
        // Apply buff logic here (placeholder)
     } else if (skill.type === 'HEAL') {
        const healAmount = 50; // Placeholder
        this.player.heal(healAmount);
        this.floatingTexts.push(new FloatingText(this.player.position.x, this.player.position.y - 40, `+${healAmount}`, '#00ff00'));
+       this.createExplosion(this.player.position.x, this.player.position.y, '#00ff00', 10);
     } else {
        // Attack Skill
        if (this.player.target) {
           const dist = Math.hypot(this.player.target.position.x - this.player.position.x, this.player.target.position.y - this.player.position.y);
+          
           if (dist <= skill.range) {
-             this.performAttack(this.player, this.player.target, skill.damageMultiplier);
+             // Projectile Skills
+             if (skill.id === 'fireball' || skill.id === 'shadow_bolt' || skill.id === 'precision_shot' || skill.id === 'triple_shot') {
+                const color = skill.id === 'fireball' ? '#ff4400' : (skill.id === 'shadow_bolt' ? '#8800ff' : '#ffffff');
+                const damage = skill.damageMultiplier * (this.player.stats.intelligence || this.player.stats.strength || 10);
+                
+                if (skill.id === 'triple_shot') {
+                    // Fire 3 projectiles
+                    for(let i = -1; i <= 1; i++) {
+                        // Calculate offset target
+                        const angle = Math.atan2(this.player.target.position.y - this.player.position.y, this.player.target.position.x - this.player.position.x);
+                        const spread = 0.3; // radians
+                        const finalAngle = angle + (i * spread);
+                        const tx = this.player.position.x + Math.cos(finalAngle) * 500;
+                        const ty = this.player.position.y + Math.sin(finalAngle) * 500;
+                        
+                        this.projectiles.push(new Projectile(
+                            this.player,
+                            this.player.position.x,
+                            this.player.position.y,
+                            tx,
+                            ty,
+                            600,
+                            damage,
+                            color
+                        ));
+                    }
+                } else {
+                    this.projectiles.push(new Projectile(
+                      this.player,
+                      this.player.position.x,
+                      this.player.position.y,
+                      this.player.target.position.x,
+                      this.player.target.position.y,
+                      500,
+                      damage,
+                      color
+                    ));
+                }
+             } else {
+               // Instant Hit (Melee or Instant Magic)
+               this.dealDamage(this.player, this.player.target, skill.damageMultiplier * (this.player.stats.strength || 10));
+             }
              this.floatingTexts.push(new FloatingText(this.player.position.x, this.player.position.y - 40, `${skill.name}!`, '#ffff00'));
           } else {
              this.floatingTexts.push(new FloatingText(this.player.position.x, this.player.position.y - 40, '距離太遠', '#aaaaaa'));
@@ -494,6 +702,17 @@ export class GameEngine {
           if (skill.targetType === 'AREA' || skill.targetType === 'POINT') {
              // Area skill without target (centered on player for now)
              this.floatingTexts.push(new FloatingText(this.player.position.x, this.player.position.y - 40, `${skill.name}!`, '#ffff00'));
+             this.createExplosion(this.player.position.x, this.player.position.y, '#ff0000', 20);
+             this.triggerScreenShake(5, 200);
+             
+             // AOE Damage Logic
+             this.monsters.forEach(m => {
+               const d = Math.hypot(m.position.x - this.player!.position.x, m.position.y - this.player!.position.y);
+               if (d < 150) { // 150 radius
+                 this.dealDamage(this.player!, m, skill.damageMultiplier * (this.player!.stats.strength || 10));
+               }
+             });
+
           } else {
              this.floatingTexts.push(new FloatingText(this.player.position.x, this.player.position.y - 40, '需要目標', '#aaaaaa'));
              skill.lastUsed = 0;

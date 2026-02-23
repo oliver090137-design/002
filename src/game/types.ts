@@ -5,6 +5,8 @@ export interface Stats {
   maxHp: number;
   mana: number;
   maxMana: number;
+  exp: number;
+  maxExp: number;
   strength: number;
   intelligence: number;
   defense: number;
