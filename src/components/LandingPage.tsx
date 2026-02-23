@@ -107,7 +107,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlay }) => {
                   <span className="material-symbols-outlined text-3xl">castle</span>
                 </div>
                 <div>
-                  <h4 class="text-xl font-bold text-white mb-2 uppercase tracking-wide">壯闊攻城戰火</h4>
+                  <h4 className="text-xl font-bold text-white mb-2 uppercase tracking-wide">壯闊攻城戰火</h4>
                   <p className="text-slate-400 leading-relaxed font-sans">參與大規模 PvP 攻城戰，爭奪城堡統治權。帶領您的公會邁向勝利，並向領地徵收稅金。</p>
                 </div>
               </div>
